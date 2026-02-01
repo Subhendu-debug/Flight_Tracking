@@ -110,11 +110,22 @@ export const fetchFlightData = async (bounds) => {
                     startLat = originCoords[0] + t * (destCoords[0] - originCoords[0]);
                     startLon = originCoords[1] + t * (destCoords[1] - originCoords[1]);
 
-                    // Calculate Bearing (Approximation)
-                    const y = Math.sin(destCoords[1] - originCoords[1]) * Math.cos(destCoords[0]);
-                    const x = Math.cos(originCoords[0]) * Math.sin(destCoords[0]) -
-                        Math.sin(originCoords[0]) * Math.cos(destCoords[0]) * Math.cos(destCoords[1] - originCoords[1]);
-                    track = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360; // Degrees 0-360
+                    // Calculate Bearing (Great Circle - Forward Azimuth)
+                    const toRad = (deg) => deg * Math.PI / 180;
+                    const toDeg = (rad) => rad * 180 / Math.PI;
+
+                    const lat1 = toRad(originCoords[0]);
+                    const lon1 = toRad(originCoords[1]);
+                    const lat2 = toRad(destCoords[0]);
+                    const lon2 = toRad(destCoords[1]);
+
+                    const dLon = lon2 - lon1;
+
+                    const y = Math.sin(dLon) * Math.cos(lat2);
+                    const x = Math.cos(lat1) * Math.sin(lat2) -
+                        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+                    track = (toDeg(Math.atan2(y, x)) + 360) % 360; // Normalize 0-360
 
                 } else {
                     // Fallback to random if coords missing (rare)
@@ -125,7 +136,7 @@ export const fetchFlightData = async (bounds) => {
 
                 simulatedFlights.set(`mock${i.toString(16)}`, {
                     icao24: `mock${i.toString(16)}`,
-                    callsign: `${airline}${flightNum}`, // REALISTIC CALLSIGN
+                    callsign: `${airline}${flightNum}`,
                     country: "International",
                     longitude: startLon,
                     latitude: startLat,
@@ -135,7 +146,7 @@ export const fetchFlightData = async (bounds) => {
                     onGround: false,
                     origin_airport: origin,
                     destination_airport: dest,
-                    photo: mockPhoto // Persist the photo
+                    photo: mockPhoto
                 });
             }
         }
