@@ -12,6 +12,8 @@ const API_URL = 'https://opensky-network.org/api/states/all';
 // lamin, lmin, lamax, lmax
 // Europe approx: 35.0, -10.0, 70.0, 40.0
 
+const simulatedFlights = new Map();
+
 export const fetchFlightData = async (bounds) => {
     try {
         let url = API_URL;
@@ -20,7 +22,7 @@ export const fetchFlightData = async (bounds) => {
             url = `${API_URL}?lamin=${bounds.lamin}&lmin=${bounds.lmin}&lamax=${bounds.lamax}&lmax=${bounds.lmax}`;
         }
 
-        const response = await axios.get(url);
+        const response = await axios.get(url, { timeout: 5000 }); // Add timeout
         const data = response.data;
 
         // OpenSky returns { time: number, states: check[][] }
@@ -58,38 +60,75 @@ export const fetchFlightData = async (bounds) => {
     } catch (error) {
         console.warn("Error fetching flight data (likely API rate limit or empty). Using Mock Data.", error);
 
-        // Fallback Mock Data so the app works for the user even if API is 429/Down
-        // Generate ~1500 mock flights distributed globally to satisfy the "1000+" requirement
-        const mockFlights = [];
-        const hubs = [
-            { lat: 51.5, lon: -0.1, name: "Europe" }, // London
-            { lat: 40.7, lon: -74.0, name: "US East" }, // NYC
-            { lat: 34.0, lon: -118.2, name: "US West" }, // LA
-            { lat: 35.6, lon: 139.7, name: "Asia East" }, // Tokyo
-            { lat: 25.2, lon: 55.3, name: "Middle East" }, // Dubai
-            { lat: 1.3, lon: 103.8, name: "Asia SE" }, // Singapore
-            { lat: -33.8, lon: 151.2, name: "Australia" } // Sydney
-        ];
+        // Persistent Mock Data Logic
+        // Initialize if empty
+        if (simulatedFlights.size === 0) {
+            const hubs = [
+                { lat: 51.5, lon: -0.1, name: "Europe" }, // London
+                { lat: 40.7, lon: -74.0, name: "US East" }, // NYC
+                { lat: 34.0, lon: -118.2, name: "US West" }, // LA
+                { lat: 35.6, lon: 139.7, name: "Asia East" }, // Tokyo
+                { lat: 25.2, lon: 55.3, name: "Middle East" }, // Dubai
+                { lat: 1.3, lon: 103.8, name: "Asia SE" }, // Singapore
+                { lat: -33.8, lon: 151.2, name: "Australia" }, // Sydney
+                { lat: -26.2, lon: 28.0, name: "Africa South" }, // JNB
+                { lat: 30.0, lon: 31.2, name: "Africa North" }, // Cairo
+                { lat: 19.0, lon: 72.8, name: "India" }, // Mumbai
+                { lat: 55.7, lon: 37.6, name: "Russia" }, // Moscow
+                { lat: -23.5, lon: -46.6, name: "South America" }, // Sao Paulo
+                { lat: 61.2, lon: -149.9, name: "Alaska" }, // Anchorage
+                { lat: 64.1, lon: -21.9, name: "Atlantic" } // Reykjavik
+            ];
+            const airports = ["LHR", "JFK", "DXB", "SIN", "SYD", "HND", "CDG", "AMS", "FRA", "LAX", "BOM", "DEL", "NRT", "PEK", "HKG", "YYZ", "YVR", "GRU", "EZE", "JNB"];
 
-        for (let i = 0; i < 1500; i++) {
-            const hub = hubs[Math.floor(Math.random() * hubs.length)];
-            // Random scatter around hub
-            const lat = hub.lat + (Math.random() - 0.5) * 40;
-            const lon = hub.lon + (Math.random() - 0.5) * 60;
+            for (let i = 0; i < 3000; i++) {
+                const hub = hubs[Math.floor(Math.random() * hubs.length)];
+                const startLat = hub.lat + (Math.random() - 0.5) * 50;
+                const startLon = hub.lon + (Math.random() - 0.5) * 70;
 
-            mockFlights.push({
-                icao24: `mock${i.toString(16)}`,
-                callsign: `FLT${1000 + i}`,
-                country: "International",
-                longitude: lon,
-                latitude: lat,
-                altitude: 5000 + Math.random() * 8000,
-                velocity: 200 + Math.random() * 100,
-                track: Math.floor(Math.random() * 360),
-                onGround: false
-            });
+                // Pick two random airports
+                const origin = airports[Math.floor(Math.random() * airports.length)];
+                let dest = airports[Math.floor(Math.random() * airports.length)];
+                while (dest === origin) dest = airports[Math.floor(Math.random() * airports.length)];
+
+                simulatedFlights.set(`mock${i.toString(16)}`, {
+                    icao24: `mock${i.toString(16)}`,
+                    callsign: `FLT${1000 + i}`,
+                    country: "International",
+                    longitude: startLon,
+                    latitude: startLat,
+                    altitude: 5000 + Math.random() * 8000,
+                    velocity: 200 + Math.random() * 100, // m/s roughly
+                    track: Math.floor(Math.random() * 360),
+                    onGround: false,
+                    origin_airport: origin,
+                    destination_airport: dest
+                });
+            }
         }
-        return mockFlights;
+
+        // Simulate Movement for all flights
+        const flights = [];
+        simulatedFlights.forEach((plane, key) => {
+            // Update position based on velocity (simple approximation)
+            // 200 m/s approx 0.002 degrees per second? very rough.
+            // Let's say 0.05 degree shift every update (10s)
+
+            // Move partially in track direction
+            const rad = plane.track * (Math.PI / 180);
+            const dist = 0.05; // degree step
+            plane.latitude += Math.cos(rad) * dist;
+            plane.longitude += Math.sin(rad) * dist;
+
+            // Random small turn
+            if (Math.random() > 0.8) {
+                plane.track = (plane.track + (Math.random() - 0.5) * 20) % 360;
+            }
+
+            flights.push({ ...plane }); // Return copy
+        });
+
+        return flights;
     }
 };
 

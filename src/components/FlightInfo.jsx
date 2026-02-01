@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { X, Plane, Gauge, Eclipse, MapPin, Globe, Calendar, Building2, Map } from 'lucide-react';
 import { fetchAircraftPhoto } from '../services/api';
 import { getAirlineName } from '../data/airlines';
+import { getAirportName } from '../data/airports';
 
 const FlightInfo = ({ plane, onClose }) => {
     const [photo, setPhoto] = useState(null);
@@ -68,12 +69,12 @@ const FlightInfo = ({ plane, onClose }) => {
                         <div className="flex justify-between items-center mb-3">
                             <div className="text-center">
                                 <p className="text-xs text-slate-400 font-bold uppercase">Origin</p>
-                                <p className="text-lg font-bold text-white">N/A</p> {/* Placeholder */}
+                                <p className="text-sm font-bold text-white max-w-[100px] leading-tight mx-auto">{getAirportName(plane.origin_airport)}</p>
                             </div>
-                            <Plane size={24} className="text-slate-500 transform rotate-90" />
+                            <Plane size={24} className="text-slate-500 transform rotate-90 shrink-0 mx-2" />
                             <div className="text-center">
                                 <p className="text-xs text-slate-400 font-bold uppercase">Dest</p>
-                                <p className="text-lg font-bold text-white">N/A</p> {/* Placeholder */}
+                                <p className="text-sm font-bold text-white max-w-[100px] leading-tight mx-auto">{getAirportName(plane.destination_airport)}</p>
                             </div>
                         </div>
                         <div className="flex justify-between items-center pt-2 border-t border-slate-700/30">
