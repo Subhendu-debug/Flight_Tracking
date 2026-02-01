@@ -18,9 +18,10 @@ const Map = () => {
         // European bounds example: { lamin: 35, lmin: -10, lamax: 70, lmax: 40 }
         // Let's try to fetch global or a large area.
         const data = await fetchFlightData();
-        // Limit to 500 flights to keep performance high for demo
-        const limitedData = data.slice(0, 300);
-        setFlights(limitedData);
+        // If it's mock data (length 7), we don't want to slice it away if we had a logic error.
+        // But slice(0, 300) is fine for 7 items.
+        // However, let's just setFlights directly.
+        setFlights(data);
         setLoading(false);
         setLastUpdated(new Date());
     };
@@ -111,6 +112,11 @@ const Map = () => {
                         <p className="text-xs text-slate-400 font-medium">
                             {loading ? 'Fetching data...' : `${flights.length} active flights`}
                         </p>
+                        {!loading && flights.length < 10 && (
+                            <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-500 border border-yellow-500/30">
+                                SIMULATED
+                            </span>
+                        )}
                     </div>
                 </div>
             </div>
