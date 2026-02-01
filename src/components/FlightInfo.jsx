@@ -10,11 +10,17 @@ const FlightInfo = ({ plane, onClose }) => {
     useEffect(() => {
         if (plane) {
             setPhoto(null); // Reset
-            const getPhoto = async () => {
-                const url = await fetchAircraftPhoto(plane.icao24);
-                setPhoto(url);
-            };
-            getPhoto();
+            // If mock photo exists, use it
+            if (plane.photo) {
+                setPhoto(plane.photo);
+            } else {
+                // Fetch real photo
+                const getPhoto = async () => {
+                    const url = await fetchAircraftPhoto(plane.icao24);
+                    setPhoto(url);
+                };
+                getPhoto();
+            }
         }
     }, [plane]);
 

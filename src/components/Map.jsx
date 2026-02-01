@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { fetchFlightData, fetchFlightTrack } from '../services/api';
+import { getAirportCoords } from '../data/airports';
+import L from 'leaflet';
 import PlaneMarker from './PlaneMarker';
 import FlightInfo from './FlightInfo';
 import { Loader2 } from 'lucide-react';
@@ -84,11 +86,54 @@ const Map = () => {
                     url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                 />
 
-                {selectedFlight && flightPath.length > 1 && (
-                    <Polyline
-                        positions={flightPath}
-                        pathOptions={{ color: '#38bdf8', weight: 2, dashArray: '4, 8', opacity: 0.7 }}
-                    />
+                {/* Route from Origin to Plane to Destination */}
+                {selectedFlight && (
+                    <>
+                        {/* Traveled Path (Simulated or Real) */}
+                        {flightPath.length > 1 && (
+                            <Polyline
+                                positions={flightPath}
+                                pathOptions={{ color: '#0ea5e9', weight: 4, opacity: 0.8 }} // Sky Blue
+                            />
+                        )}
+
+                        {/* Planned Route (Origin -> Destination Great Circle projection approx) */}
+                        {(() => {
+                            const originCoords = getAirportCoords(selectedFlight.origin_airport);
+                            const destCoords = getAirportCoords(selectedFlight.destination_airport);
+
+                            if (originCoords && destCoords) {
+                                return (
+                                    <>
+                                        {/* Full Route Line */}
+                                        <Polyline
+                                            positions={[originCoords, destCoords]}
+                                            pathOptions={{ color: '#6366f1', weight: 2, dashArray: '6, 6', opacity: 0.5 }} // Indigo Dashed
+                                        />
+                                        {/* Origin Marker */}
+                                        <Marker position={originCoords} icon={
+                                            L.divIcon({
+                                                className: 'bg-transparent',
+                                                html: `<div class="w-3 h-3 bg-indigo-500 rounded-full border-2 border-white shadow-lg"></div>`
+                                            })
+                                        }>
+                                            <Popup className="text-slate-900 font-bold">Origin: {selectedFlight.origin_airport}</Popup>
+                                        </Marker>
+                                        {/* Destination Marker */}
+                                        <Marker position={destCoords} icon={
+                                            L.divIcon({
+                                                className: 'bg-transparent',
+                                                html: `<div class="w-3 h-3 bg-purple-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>`
+                                            })
+                                        }>
+                                            <Popup className="text-slate-900 font-bold">Dest: {selectedFlight.destination_airport}</Popup>
+                                        </Marker>
+                                    </>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </>
                 )}
 
                 {flights.map((flight) => (
