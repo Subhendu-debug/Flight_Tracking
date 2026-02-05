@@ -6,7 +6,17 @@ import { getAirportCoords } from '../data/airports';
 import L from 'leaflet';
 import PlaneMarker from './PlaneMarker';
 import FlightInfo from './FlightInfo';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Search } from 'lucide-react';
+
+const FlyToSelection = ({ position }) => {
+    const map = useMap();
+    useEffect(() => {
+        if (position) {
+            map.flyTo(position, 8, { duration: 2 });
+        }
+    }, [position, map]);
+    return null;
+};
 
 const Map = () => {
     const [flights, setFlights] = useState([]);
@@ -14,6 +24,7 @@ const Map = () => {
     const [flightPath, setFlightPath] = useState([]);
     const [loading, setLoading] = useState(true);
     const [lastUpdated, setLastUpdated] = useState(null);
+    const [searchQuery, setSearchQuery] = useState("");
 
     const getData = async () => {
         // Fetch all data for now. Can be optimized to fetch by bounds.
@@ -71,6 +82,23 @@ const Map = () => {
     }, [flights, selectedFlight]); // Be careful with dependency selectedFlight here to avoid loop if we update it.
     // Actually, we should probably separate "selectedFlightId" from the object to avoid issues, 
     // but for now let's just use the finding logic.
+
+    const handleSearch = (e) => {
+        e.preventDefault();
+        if (!searchQuery) return;
+
+        const found = flights.find(f =>
+            (f.callsign && f.callsign.toLowerCase().includes(searchQuery.toLowerCase())) ||
+            (f.icao24 && f.icao24.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+
+        if (found) {
+            setSelectedFlight(found);
+            setSearchQuery(""); // Clear after finding? Or keep it? Let's keep it clean.
+        } else {
+            alert("Flight not found!");
+        }
+    };
 
     return (
         <div className="relative h-screen w-screen bg-slate-950">
@@ -136,6 +164,9 @@ const Map = () => {
                     </>
                 )}
 
+                {/* Helper to center map on selection */}
+                {selectedFlight && <FlyToSelection position={[selectedFlight.latitude, selectedFlight.longitude]} />}
+
                 {flights.map((flight) => (
                     <PlaneMarker
                         key={flight.icao24}
@@ -152,7 +183,7 @@ const Map = () => {
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-sky-400 to-purple-500 bg-clip-text text-transparent">
                         SkyStream
                     </h1>
-                    <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-2 mt-1 mb-3">
                         <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500' : 'bg-green-500 animate-pulse'}`}></div>
                         <p className="text-xs text-slate-400 font-medium">
                             {loading ? 'Fetching data...' : `${flights.length} active flights`}
@@ -163,6 +194,18 @@ const Map = () => {
                             </span>
                         )}
                     </div>
+
+                    {/* Search Bar */}
+                    <form onSubmit={handleSearch} className="relative">
+                        <input
+                            type="text"
+                            placeholder="Find flight (e.g. AAL)..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-slate-800/50 border border-slate-700 text-slate-200 text-sm rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:ring-1 focus:ring-sky-500 placeholder:text-slate-500"
+                        />
+                        <Search size={16} className="absolute left-3 top-2.5 text-slate-500" />
+                    </form>
                 </div>
             </div>
 
