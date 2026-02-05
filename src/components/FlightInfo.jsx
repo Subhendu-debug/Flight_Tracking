@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { X, Plane, Gauge, Eclipse, MapPin, Globe, Calendar, Building2, Map } from 'lucide-react';
 import { fetchAircraftPhoto } from '../services/api';
 import { getAirlineName } from '../data/airlines';
 import { getAirportName } from '../data/airports';
+
 
 const FlightInfo = ({ plane, onClose }) => {
     const [photo, setPhoto] = useState(null);
@@ -16,7 +18,7 @@ const FlightInfo = ({ plane, onClose }) => {
             } else {
                 // Fetch real photo
                 const getPhoto = async () => {
-                    const url = await fetchAircraftPhoto(plane.icao24);
+                    const url = await fetchAircraftPhoto(plane.icao24, plane.callsign);
                     setPhoto(url);
                 };
                 getPhoto();
@@ -30,26 +32,32 @@ const FlightInfo = ({ plane, onClose }) => {
     const statusColor = plane.onGround ? "text-yellow-400" : "text-green-400";
     // Use helper to get full name
     const airlineName = getAirlineName(plane.callsign);
-    // Strip numbers for display if needed or keep full callsign
 
     return (
         <div className="absolute top-4 right-4 z-[1000] w-80 bg-slate-900/90 backdrop-blur-md rounded-2xl border border-slate-700 shadow-2xl overflow-hidden text-slate-100 transition-all duration-300 animate-in slide-in-from-right-10">
 
-            {photo && (
-                <div className="w-full h-48 overflow-hidden relative group">
-                    <img
-                        src={photo}
-                        alt={plane.callsign}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-80"></div>
-                </div>
-            )}
+            <div className="w-full h-48 overflow-hidden relative group bg-slate-950">
+                {/* Real Photo or Gradient Fallback */}
+                {photo ? (
+                    <div className="w-full h-full relative">
+                        <img
+                            src={photo}
+                            alt={plane.callsign}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-80"></div>
+                    </div>
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                        <Plane size={64} className="text-slate-700 opacity-50" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
+                    </div>
+                )}
+            </div>
 
             <div className="p-6 relative">
-                {!photo && (
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 to-purple-500"></div>
-                )}
+                {/* Decorative line if no photo/header image used to exist, but now we have 3D header */}
+                {/* <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-500 to-purple-500"></div> */}
 
                 <div className="flex justify-between items-start mb-6">
                     <div className="relative z-10">
@@ -93,6 +101,25 @@ const FlightInfo = ({ plane, onClose }) => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
+                        <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Calendar size={14} className="text-sky-400" />
+                                <p className="text-xs text-slate-400 uppercase font-semibold">Departure</p>
+                            </div>
+                            <p className="text-md font-medium text-white">
+                                {plane.departure_time ? new Date(plane.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
+                            </p>
+                        </div>
+                        <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                            <div className="flex items-center gap-2 mb-1">
+                                <Calendar size={14} className="text-indigo-400" />
+                                <p className="text-xs text-slate-400 uppercase font-semibold">Arrival</p>
+                            </div>
+                            <p className="text-md font-medium text-white">
+                                {plane.arrival_time ? new Date(plane.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--"}
+                            </p>
+                        </div>
+
                         <div className="p-3 bg-slate-800/50 rounded-xl border border-slate-700/50">
                             <div className="flex items-center gap-2 mb-1">
                                 <Gauge size={14} className="text-blue-400" />

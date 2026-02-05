@@ -9,3 +9,10 @@ body {
   height: 100vh;
   width: 100vw;
 }
+
+/* Smooth movement for aircraft markers */
+/* React-Leaflet sets the position using translate3d on the icon class.
+   Adding transition here makes it interpolate between updates. */
+.leaflet-marker-icon.plane-marker-icon {
+  transition: transform 10s linear !important;
+}

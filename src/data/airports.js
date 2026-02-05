@@ -34,6 +34,11 @@ export const airports = {
     "MAA": { name: "Chennai Intl, India", lat: 12.9941, lon: 80.1709 },
     "CCU": { name: "Netaji Subhash Chandra Bose Intl, Kolkata, India", lat: 22.6548, lon: 88.4467 },
     "HYD": { name: "Rajiv Gandhi Intl, Hyderabad, India", lat: 17.2403, lon: 78.4294 },
+    "PNQ": { name: "Pune Airport, India", lat: 18.5823, lon: 73.9197 },
+    "AMD": { name: "Sardar Vallabhbhai Patel Intl, Ahmedabad, India", lat: 23.0734, lon: 72.6266 },
+    "GOI": { name: "Dabolim Airport, Goa, India", lat: 15.3800, lon: 73.8314 },
+    "COK": { name: "Cochin Intl, Kochi, India", lat: 10.1518, lon: 76.3930 },
+    "JAI": { name: "Jaipur Intl, India", lat: 26.8242, lon: 75.8122 },
 
     // Europe Regional
     "MUC": { name: "Munich Airport, Germany", lat: 48.3536, lon: 11.7750 },
