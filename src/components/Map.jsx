@@ -5,6 +5,7 @@ import { fetchFlightData, fetchFlightTrack } from '../services/api';
 import { getAirportCoords } from '../data/airports';
 import L from 'leaflet';
 import PlaneMarker from './PlaneMarker';
+import FlightCanvasLayer from './FlightCanvasLayer';
 import FlightInfo from './FlightInfo';
 import { Loader2, Search, Sun, Moon } from 'lucide-react';
 
@@ -31,7 +32,11 @@ const MapController = ({ onBoundsChange }) => {
 
     // Initial bounds
     useEffect(() => {
-        onBoundsChange(map.getBounds());
+        // Debounce initial load slightly to ensure map is ready
+        const t = setTimeout(() => {
+            onBoundsChange(map.getBounds());
+        }, 100);
+        return () => clearTimeout(t);
     }, [map]);
 
     return null;
@@ -41,50 +46,53 @@ const Map = () => {
     const [flights, setFlights] = useState([]);
     const [selectedFlight, setSelectedFlight] = useState(null);
     const [flightPath, setFlightPath] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
-    const [loadProgress, setLoadProgress] = useState(0);
     const [bounds, setBounds] = useState(null);
     const [isDarkMode, setIsDarkMode] = useState(true);
 
-    const getData = async () => {
-        // Fetch all data for now. Can be optimized to fetch by bounds.
-        // European bounds example: { lamin: 35, lmin: -10, lamax: 70, lmax: 40 }
-        // Let's try to fetch global or a large area.
-        const data = await fetchFlightData();
-        // If it's mock data (length 7), we don't want to slice it away if we had a logic error.
-        // But slice(0, 300) is fine for 7 items.
-        // However, let's just setFlights directly.
+    const getData = useCallback(async (currentBounds) => {
+        setLoading(true);
+        // Format bounds for API: { lamin, lmin, lamax, lmax }
+        // Leaflet bounds: _southWest, _northEast
+        let boundsObj = null;
+        if (currentBounds) {
+            boundsObj = {
+                lamin: currentBounds.getSouth(),
+                lmin: currentBounds.getWest(),
+                lamax: currentBounds.getNorth(),
+                lmax: currentBounds.getEast()
+            };
+        }
+
+        const data = await fetchFlightData(boundsObj);
+
+        // Replace flights with new data (lazy loading - only keep what's needed)
         setFlights(data);
 
-        // Finish loading animation
-        setLoadProgress(100);
-        setTimeout(() => {
-            setLoading(false);
-        }, 500); // Small delay to show 100%
-
+        setLoading(false);
         setLastUpdated(new Date());
-    };
-
-    // Simulated Loading Progress
-    useEffect(() => {
-        if (loading && loadProgress < 90) {
-            const timer = setInterval(() => {
-                setLoadProgress(prev => {
-                    const next = prev + Math.random() * 15;
-                    return next > 90 ? 90 : next;
-                });
-            }, 200);
-            return () => clearInterval(timer);
-        }
-    }, [loading, loadProgress]);
-
-    useEffect(() => {
-        getData();
-        const interval = setInterval(getData, 10000); // Poll every 10s
-        return () => clearInterval(interval);
     }, []);
+
+    // Trigger fetch when bounds change
+    useEffect(() => {
+        if (bounds) {
+            getData(bounds);
+        }
+    }, [bounds, getData]);
+
+    // Polling also needs to respect current bounds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (bounds) {
+                getData(bounds);
+            }
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [bounds, getData]);
+
+    // MapController triggers initial bounds update, which triggers first getData()
 
     useEffect(() => {
         const getTrack = async () => {
@@ -143,9 +151,12 @@ const Map = () => {
 
     // Optimization: Viewport Pruning
     const visibleFlights = useMemo(() => {
-        if (!bounds) return flights; // Render all if bounds not ready (or could be 0)
-        // Pad bounds slightly to avoid popping issues at edges
-        const paddedBounds = bounds.pad(0.1);
+        // Since we are now lazily loading ONLY the visible flights from the API/Mock service,
+        // `flights` state already contains only the visible ones (plus maybe a small buffer if the API is generous).
+        // So we can just return all flights in state.
+        // However, strictly filtering again doesn't hurt and ensures clean edges if API returns loose bounds.
+        if (!bounds) return [];
+        const paddedBounds = bounds.pad(0.1); // Keep slight padding for smooth panning
         return flights.filter(f => paddedBounds.contains([f.latitude, f.longitude]));
     }, [flights, bounds]);
 
@@ -224,18 +235,27 @@ const Map = () => {
                 {/* Helper to center map on selection */}
                 {selectedFlight && <FlyToSelection position={[selectedFlight.latitude, selectedFlight.longitude]} />}
 
-                {visibleFlights.map((flight) => (
+                {/* Optimized Canvas Layer for 20k+ flights */}
+                <FlightCanvasLayer
+                    flights={visibleFlights}
+                    onFlightClick={setSelectedFlight}
+                    selectedFlightId={selectedFlight?.icao24}
+                    isDarkMode={isDarkMode}
+                />
+
+                {/* Selected Flight Highlighting: Render ONE detailed DOM marker for the selected flight */}
+                {selectedFlight && (
                     <PlaneMarker
-                        key={flight.icao24}
-                        plane={flight}
-                        onClick={setSelectedFlight}
-                        isSelected={selectedFlight?.icao24 === flight.icao24}
+                        plane={selectedFlight}
+                        onClick={() => { }} // Already selected
+                        isSelected={true}
                         isDarkMode={isDarkMode}
                     />
-                ))}
+                )}
             </MapContainer>
 
             {/* UI Overlay */}
+            {/* UI Overlay (Top Left) */}
             <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-2 pointer-events-none">
                 <div className={`backdrop-blur-md p-4 rounded-2xl border shadow-xl pointer-events-auto transition-colors duration-300 ${isDarkMode ? 'bg-slate-900/80 border-slate-700/50' : 'bg-white/80 border-slate-200/50'}`}>
                     <div className="flex justify-between items-center mb-1">
@@ -253,16 +273,8 @@ const Map = () => {
                     <div className="flex items-center gap-2 mb-3">
                         <div className={`w-2 h-2 rounded-full ${loading ? 'bg-yellow-500' : 'bg-green-500 animate-pulse'}`}></div>
                         <p className={`text-xs font-medium ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {loading ? 'Fetching data...' : `${flights.length} active flights`}
+                            {flights.length} visible flights
                         </p>
-                        {!loading && flights.length < 10 && (
-                            <span className="ml-2 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-500 border border-yellow-500/30">
-                                SIMULATED
-                            </span>
-                        )}
-                        <span className={`text-[10px] ml-2 ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                            ({visibleFlights.length} visible)
-                        </span>
                     </div>
 
                     {/* Search Bar */}
@@ -282,32 +294,23 @@ const Map = () => {
                 </div>
             </div>
 
+            {/* Bottom-left Loader */}
+            {loading && (
+                <div className={`absolute bottom-4 left-4 z-[1000] flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur border shadow-2xl text-sm font-bold animate-in fade-in slide-in-from-bottom-2 duration-300 ${isDarkMode
+                    ? 'bg-slate-900/90 border-slate-700 text-sky-400'
+                    : 'bg-white/90 border-slate-300 text-sky-600'
+                    }`}>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Loading Flights...</span>
+                </div>
+            )}
+
             <FlightInfo
                 plane={selectedFlight}
                 onClose={() => setSelectedFlight(null)}
                 isDarkMode={isDarkMode}
             />
-
-            {loading && (
-                <div className={`absolute inset-0 z-[2000] flex items-center justify-center transition-opacity duration-500 ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                    <div className="flex flex-col items-center w-full max-w-md px-6">
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-sky-400 to-purple-500 bg-clip-text text-transparent mb-8 animate-pulse">
-                            SkyStream
-                        </h1>
-                        <div className={`w-full rounded-full h-2 overflow-hidden border shadow-[0_0_20px_rgba(14,165,233,0.3)] ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-slate-200 border-slate-300'}`}>
-                            <div
-                                className="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 h-full transition-all duration-300 ease-out"
-                                style={{ width: `${loadProgress}%` }}
-                            ></div>
-                        </div>
-                        <div className={`flex justify-between w-full mt-2 text-xs font-mono ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
-                            <span>INITIALIZING SYSTEM...</span>
-                            <span>{Math.round(loadProgress)}%</span>
-                        </div>
-                    </div>
-                </div>
-            )}
-        </div>
+        </div >
     );
 };
 

@@ -32,8 +32,8 @@ const PlaneMarker = React.memo(({ plane, onClick, isSelected, isDarkMode = true 
                 color: ${color};
                 filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
                 transition: transform 0.5s ease-in-out, color 0.3s ease;
-                width: 24px;
-                height: 24px;
+                width: 25px;
+                height: 25px;
             ">
                 ${planeSvgString}
             </div>
@@ -42,8 +42,8 @@ const PlaneMarker = React.memo(({ plane, onClick, isSelected, isDarkMode = true 
         return divIcon({
             html: html,
             className: 'plane-marker-icon',
-            iconSize: [24, 24],
-            iconAnchor: [12, 12],
+            iconSize: [25, 25],
+            iconAnchor: [12.5, 12.5],
         });
     }, [plane.track, isSelected, isDarkMode]);
 

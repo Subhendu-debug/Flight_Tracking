@@ -19,6 +19,55 @@ const regionalAirlines = {
     Global: ["UAE", "QFA", "ANZ", "ETH", "QTR"]
 };
 
+// Define regions for domestic flights
+const domesticRoutes = {
+    US: ["JFK", "LAX", "SFO", "ORD", "DFW", "DEN", "ATL", "MIA", "SEA", "BOS"],
+    India: ["BOM", "DEL", "BLR", "MAA", "CCU", "HYD", "PNQ", "AMD", "GOI", "COK", "JAI"],
+    Europe: ["LHR", "CDG", "AMS", "FRA", "MUC", "ZRH", "BCN", "MAD", "FCO", "IST"],
+    Asia: ["HND", "NRT", "KIX", "ICN", "HKG", "SIN", "BKK", "KUL"],
+    China: ["PEK", "PVG", "CAN", "SZX", "CTU"]
+};
+
+// All airports list
+const allAirports = Object.values(domesticRoutes).flat().concat(["DXB", "SYD", "GRU", "JNB", "YYZ", "YVR", "EZE"]);
+
+// Helper to calculate route parameters
+const calculateRouteParams = (origin, dest) => {
+    const originCoords = getAirportCoords(origin);
+    const destCoords = getAirportCoords(dest);
+
+    if (!originCoords || !destCoords) return null;
+
+    // Calculate Bearing (Great Circle - Forward Azimuth)
+    const toRad = (deg) => deg * Math.PI / 180;
+    const toDeg = (rad) => rad * 180 / Math.PI;
+
+    const lat1 = toRad(originCoords[0]);
+    const lon1 = toRad(originCoords[1]);
+    const lat2 = toRad(destCoords[0]);
+    const lon2 = toRad(destCoords[1]);
+
+    const dLon = lon2 - lon1;
+
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) -
+        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+    const track = (toDeg(Math.atan2(y, x)) + 360) % 360; // Normalize 0-360
+
+    // Calculate Distance (Haversine) in km
+    const R = 6371; // Radius of the earth in km
+    const dLat = lat2 - lat1;
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1) * Math.cos(lat2) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const distance = R * c; // Distance in km
+
+    return { originCoords, destCoords, track, distance };
+};
+
 export const fetchFlightData = async (bounds) => {
     try {
         let url = API_URL;
@@ -46,21 +95,10 @@ export const fetchFlightData = async (bounds) => {
         })).filter(plane => plane.longitude && plane.latitude && !plane.onGround);
 
     } catch (error) {
-        console.warn("Error fetching flight data. Using Mock Data.", error);
+        // console.warn("Error fetching flight data. Using Mock Data."); // Reduce noise
 
         if (simulatedFlights.size === 0) {
-            // Define regions for domestic flights
-            const domesticRoutes = {
-                US: ["JFK", "LAX", "SFO", "ORD", "DFW", "DEN", "ATL", "MIA", "SEA", "BOS"],
-                India: ["BOM", "DEL", "BLR", "MAA", "CCU", "HYD", "PNQ", "AMD", "GOI", "COK", "JAI"],
-                Europe: ["LHR", "CDG", "AMS", "FRA", "MUC", "ZRH", "BCN", "MAD", "FCO", "IST"],
-                Asia: ["HND", "NRT", "KIX", "ICN", "HKG", "SIN", "BKK", "KUL"],
-                China: ["PEK", "PVG", "CAN", "SZX", "CTU"]
-            };
-
-            const allAirports = Object.values(domesticRoutes).flat().concat(["DXB", "SYD", "GRU", "JNB", "YYZ", "YVR", "EZE"]);
-
-            for (let i = 0; i < 3000; i++) {
+            for (let i = 0; i < 4000; i++) { // Generate 4000 flights
                 // Decision: 50% Domestic, 50% International
                 const isDomestic = Math.random() < 0.5;
                 let origin, dest, airlines, regionKey;
@@ -87,58 +125,30 @@ export const fetchFlightData = async (bounds) => {
                 const airline = airlines[Math.floor(Math.random() * airlines.length)];
                 const flightNum = Math.floor(Math.random() * 900) + 100;
 
-
-
                 // Calculate Spawn Position ALONG the route
-                const originCoords = getAirportCoords(origin);
-                const destCoords = getAirportCoords(dest);
+                const routeParams = calculateRouteParams(origin, dest);
 
                 let startLat, startLon, track, startTime, endTime;
 
-                if (originCoords && destCoords) {
-                    // Linear interpolation for spawn point (visual approx)
-                    // t = 0 (origin) -> 1 (dest). Spawn somewhere in middle 10-90%
-                    const t = 0.1 + Math.random() * 0.8;
-                    startLat = originCoords[0] + t * (destCoords[0] - originCoords[0]);
-                    startLon = originCoords[1] + t * (destCoords[1] - originCoords[1]);
+                if (routeParams) {
+                    const { originCoords, destCoords, track: routeTrack, distance } = routeParams;
+                    track = routeTrack;
 
-                    // Calculate Bearing (Great Circle - Forward Azimuth)
-                    const toRad = (deg) => deg * Math.PI / 180;
-                    const toDeg = (rad) => rad * 180 / Math.PI;
-
-                    const lat1 = toRad(originCoords[0]);
-                    const lon1 = toRad(originCoords[1]);
-                    const lat2 = toRad(destCoords[0]);
-                    const lon2 = toRad(destCoords[1]);
-
-                    const dLon = lon2 - lon1;
-
-                    const y = Math.sin(dLon) * Math.cos(lat2);
-                    const x = Math.cos(lat1) * Math.sin(lat2) -
-                        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-
-                    track = (toDeg(Math.atan2(y, x)) + 360) % 360; // Normalize 0-360
-
-                    // Calculate Distance (Haversine) in km
-                    const R = 6371; // Radius of the earth in km
-                    const dLat = lat2 - lat1;
-                    const a =
-                        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(lat1) * Math.cos(lat2) *
-                        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    const distance = R * c; // Distance in km
-
-                    // Estimate Duration based on random velocity (approx 800-900 km/h usually)
-                    // We generate velocity below, let's pre-generate it or use a constant approx for schedule
+                    // Estimate Duration
                     const velocityKmH = 850;
                     const durationHours = distance / velocityKmH;
                     const durationMs = durationHours * 60 * 60 * 1000;
 
-                    // Calculate Times based on 't' (progres)
-                    const elapsedMs = durationMs * t;
-                    const now = Date.now();
+                    // Random progress 10-90%
+                    const t = 0.1 + Math.random() * 0.8;
 
+                    // Calculate exact current position based on 't'
+                    startLat = originCoords[0] + t * (destCoords[0] - originCoords[0]);
+                    startLon = originCoords[1] + t * (destCoords[1] - originCoords[1]);
+
+                    const now = Date.now();
+                    // Back-calculate Departure Time so that 'now' corresponds to 't'
+                    const elapsedMs = durationMs * t;
                     startTime = new Date(now - elapsedMs).toISOString();
                     endTime = new Date(now + (durationMs - elapsedMs)).toISOString();
 
@@ -153,6 +163,10 @@ export const fetchFlightData = async (bounds) => {
 
                 const countryName = isDomestic ? (regionKey === "US" ? "United States" : regionKey) : "International";
 
+                // Store Start/End Coords for robust interpolation
+                const originCoordsVal = routeParams ? routeParams.originCoords : [startLat, startLon];
+                const destCoordsVal = routeParams ? routeParams.destCoords : [startLat, startLon];
+
                 simulatedFlights.set(`mock${i.toString(16)}`, {
                     icao24: `mock${i.toString(16)}`,
                     callsign: `${airline}${flightNum}`,
@@ -160,12 +174,14 @@ export const fetchFlightData = async (bounds) => {
                     longitude: startLon,
                     latitude: startLat,
                     altitude: 5000 + Math.random() * 8000,
-                    velocity: 200 + Math.random() * 100, // This is m/s. 250 m/s ~= 900 km/h
+                    velocity: 200 + Math.random() * 100, // m/s
                     track: track,
                     onGround: false,
                     origin_airport: origin,
                     destination_airport: dest,
-                    photo: null, // No random photo, defaults to placeholder
+                    start_coords: originCoordsVal,
+                    end_coords: destCoordsVal,
+                    photo: null,
                     departure_time: startTime,
                     arrival_time: endTime
                 });
@@ -175,12 +191,91 @@ export const fetchFlightData = async (bounds) => {
         // Simulate Movement for all flights
         const flights = [];
         simulatedFlights.forEach((plane, key) => {
-            const rad = plane.track * (Math.PI / 180);
-            const dist = 0.05; // degree step
-            plane.latitude += Math.cos(rad) * dist;
-            plane.longitude += Math.sin(rad) * dist;
+            const now = Date.now();
+            const arrivalTime = new Date(plane.arrival_time).getTime();
+            const departureTime = new Date(plane.departure_time).getTime();
+
+            // Check if flight has arrived
+            if (now > arrivalTime) {
+                // RESPRAWN LOGIC:
+                const newOrigin = plane.destination_airport || "LHR";
+                let newDest = allAirports[Math.floor(Math.random() * allAirports.length)];
+                while (newDest === newOrigin) {
+                    newDest = allAirports[Math.floor(Math.random() * allAirports.length)];
+                }
+
+                const route = calculateRouteParams(newOrigin, newDest);
+
+                if (route) {
+                    const { originCoords, destCoords, track: newTrack, distance } = route;
+
+                    plane.origin_airport = newOrigin;
+                    plane.destination_airport = newDest;
+                    plane.start_coords = originCoords;
+                    plane.end_coords = destCoords;
+                    plane.latitude = originCoords[0];
+                    plane.longitude = originCoords[1];
+                    plane.track = newTrack;
+
+                    const velocityKmH = 850;
+                    const durationHours = distance / velocityKmH;
+                    const durationMs = durationHours * 60 * 60 * 1000;
+
+                    plane.departure_time = new Date(now).toISOString();
+                    plane.arrival_time = new Date(now + durationMs).toISOString();
+                }
+            } else {
+                // TIME-BASED INTERPOLATION (Fixes overshoot/miscalculation)
+                const totalDuration = arrivalTime - departureTime;
+
+                if (totalDuration > 0 && plane.start_coords && plane.end_coords) {
+                    const elapsed = now - departureTime;
+                    const t = Math.max(0, Math.min(1, elapsed / totalDuration)); // Clamp 0-1
+
+                    const startLat = plane.start_coords[0];
+                    const startLon = plane.start_coords[1];
+                    const endLat = plane.end_coords[0];
+                    const endLon = plane.end_coords[1];
+
+                    // Update Position
+                    plane.latitude = startLat + (endLat - startLat) * t;
+                    plane.longitude = startLon + (endLon - startLon) * t;
+
+                    // Update Track to point to destination (Simple bearing calculation)
+                    const toRad = deg => deg * Math.PI / 180;
+                    const toDeg = rad => rad * 180 / Math.PI;
+
+                    const dLon = toRad(endLon - plane.longitude);
+                    const lat1 = toRad(plane.latitude);
+                    const lat2 = toRad(endLat);
+
+                    const y = Math.sin(dLon) * Math.cos(lat2);
+                    const x = Math.cos(lat1) * Math.sin(lat2) -
+                        Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+
+                    plane.track = (toDeg(Math.atan2(y, x)) + 360) % 360;
+                } else {
+                    // Fallback for old planes or missing coords (incremental)
+                    const rad = plane.track * (Math.PI / 180);
+                    const dist = 0.05;
+                    plane.latitude += Math.cos(rad) * dist;
+                    plane.longitude += Math.sin(rad) * dist;
+                }
+            }
+
             flights.push({ ...plane });
         });
+
+        // Filter by bounds if provided
+        if (bounds) {
+            const { lamin, lmin, lamax, lmax } = bounds;
+            return flights.filter(f =>
+                f.latitude >= lamin &&
+                f.latitude <= lamax &&
+                f.longitude >= lmin &&
+                f.longitude <= lmax
+            );
+        }
 
         return flights;
     }
