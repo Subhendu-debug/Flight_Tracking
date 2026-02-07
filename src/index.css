@@ -16,3 +16,29 @@ body {
 .leaflet-marker-icon.plane-marker-icon {
   transition: transform 10s linear !important;
 }
+
+/* Map Label Styling */
+/* Map Label Styling */
+/* Dark Mode: Dim the base map slightly but keep contrast for borders */
+/* Dark Mode: Boost brightness to ensure borders are visible on all screens */
+.leaflet-layer.map-base-dark {
+  filter: brightness(150%) contrast(110%);
+}
+
+.leaflet-layer.map-labels-dark {
+  /* Invert Light Labels (Black -> White) for sharper text. 
+     Hue-rotate preserves some color accuracy if needed. 
+     Drop shadow for readability against brightened map. */
+  filter: invert(100%) hue-rotate(180deg) brightness(200%) contrast(150%) drop-shadow(0 0 2px rgba(0, 0, 0, 0.8));
+}
+
+/* Light Mode: Boost contrast for borders */
+.leaflet-layer.map-base-light {
+  filter: contrast(120%);
+}
+
+.leaflet-layer.map-labels-light {
+  /* Use contrast to darken text to black, ensuring white halos remain white.
+     brightness(0) was turning halos black, making text look bold/thick. */
+  filter: grayscale(100%) contrast(200%);
+}

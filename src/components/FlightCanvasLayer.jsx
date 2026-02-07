@@ -9,7 +9,7 @@ const FlightCanvasLayer = ({ flights, onFlightClick, selectedFlightId, isDarkMod
 
     // Constants for drawing
     const PLANE_SIZE = 16;
-    const PLANE_COLOR_DARK = '#cbd5e1'; // slate-300
+    const PLANE_COLOR_DARK = '#fbbf24'; // amber-400 (Yellow for dark mode)
     const PLANE_COLOR_LIGHT = '#d97706'; // amber-600
     const SELECTED_COLOR = '#38bdf8'; // sky-400
 

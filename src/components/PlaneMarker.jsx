@@ -20,8 +20,8 @@ const PlaneMarker = React.memo(({ plane, onClick, isSelected, isDarkMode = true 
         } else {
             // Dark Mode: slate-300 (light grey)
             // Light Mode: amber-600 (dark yellow/orange for visibility against white/light map)
-            // User requested "yellow" for light mode to fix visibility
-            color = isDarkMode ? '#cbd5e1' : '#d97706';
+            // User requested "yellow" for dark mode
+            color = isDarkMode ? '#fbbf24' : '#d97706';
         }
 
         const rotation = plane.track;

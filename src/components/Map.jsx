@@ -175,11 +175,18 @@ const Map = () => {
                 <MapController onBoundsChange={setBounds} />
 
                 <TileLayer
+                    key={isDarkMode ? 'base-dark' : 'base-light'}
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                     url={isDarkMode
-                        ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                        : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                        ? "https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+                        : "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png"
                     }
+                    className={isDarkMode ? 'map-base-dark' : 'map-base-light'}
+                />
+                <TileLayer
+                    key={isDarkMode ? 'labels-dark' : 'labels-light'}
+                    url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png"
+                    className={isDarkMode ? 'map-labels-dark' : 'map-labels-light'}
                 />
 
                 {/* Route from Origin to Plane to Destination */}
