@@ -14,7 +14,7 @@ const regionalAirlines = {
     US: ["AAL", "UAL", "DAL", "SWA", "JBU"],
     India: ["AIC", "IGO", "VTI", "SEJ"],
     Europe: ["BAW", "DLH", "AFR", "KLM", "RYR", "EZY"],
-    Asia: ["JAL", "ANA", "SIA", "CPA", "KAL"],
+    Asia: ["JAL", "ANA", "SIA", "CPA", "KAL", "SCO"],
     China: ["CCA", "CSN", "CES", "CHH"],
     Global: ["UAE", "QFA", "ANZ", "ETH", "QTR"]
 };
@@ -312,6 +312,7 @@ const airlinePhotos = {
     "UAE": "https://images.unsplash.com/photo-1542296332-2e44a996aa21?q=80&w=800&auto=format&fit=crop", // Emirates (placeholder AA for now, need valid Unsplash)
     "KLM": "https://images.unsplash.com/photo-1520437351633-315877c3d566?q=80&w=800&auto=format&fit=crop", // KLM
     "SWA": "https://images.unsplash.com/photo-1569154941061-e0e964b4c093?q=80&w=800&auto=format&fit=crop", // Southwest
+    "SCO": "https://images.unsplash.com/photo-1570710891163-6d3b5c47248b?q=80&w=800&auto=format&fit=crop", // Scoot (Yellow/White Plane or generic)
     "Default": "https://images.unsplash.com/photo-1436491865332-7a61a109cc05?q=80&w=800&auto=format&fit=crop" // Generic Plane
 };
 
